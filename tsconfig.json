@@ -1,0 +1,25 @@
+{
+    "extends": "@quasar/app/tsconfig-preset",
+    "compilerOptions": {
+      "baseUrl": ".",
+      "noImplicitAny": false,
+      // uncomment if IE 11 support is required
+      "experimentalDecorators": true,
+      "target": "es5",
+      "paths": {
+        "@/*": ["src/*"],
+      }
+    },
+    "exclude": [
+      "node_modules", 
+      "dist", 
+      "docs"
+    ],
+    "include": [
+      "src/**/*.ts",
+      "src/shims-vue.d.ts",
+      "src/types/vue-module.d.ts",
+      "src/types/app.d.ts"
+    ]
+  }
+  
