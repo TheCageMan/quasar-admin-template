@@ -45,8 +45,6 @@ yarn dev
 yarn build
 ```
 
-Do reach out to me at "mayank091193@gmail.com" for queries.
-
 ### Customize the configuration
 See [Configuring quasar.conf.js](https://quasar.dev/quasar-cli/quasar-conf-js).
 
