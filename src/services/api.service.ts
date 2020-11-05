@@ -1,12 +1,17 @@
+import { Store } from 'vuex'
+import { IRootState } from '@/store'
 import axios, { AxiosInstance, AxiosPromise, AxiosResponse } from 'axios'
 
 export class ApiService {
 
+    private _store: Store<IRootState>
+    private _token: string
     private _client: AxiosInstance
         // Stores the 401 interceptor position so that it can be later ejected when needed
     private _401interceptor = 0
 
-    constructor(baseUrl: string) {
+    constructor(baseUrl: string, store: Store<IRootState>) {
+        this._store = store
         this._client = axios.create({
             baseURL: baseUrl,
             timeout: 30000,
@@ -19,7 +24,7 @@ export class ApiService {
 
     private setAuthHeader(): void {
         this._client.interceptors.request.use(config => {
-            //config.headers.Authorization = `Bearer ${AuthStore..idToken}`
+            config.headers.Authorization = `Bearer ${this._token}`
             return config;
         })
     }
@@ -64,8 +69,11 @@ export class ApiService {
                 if (error.request.status == 401) {
                     // Refresh the access token
                     try {
-                        //await this._msalService.accquireTokenRedirect()
-                        
+                        const resp = await this._store.AuthStoreModule.getAccessToken()
+                        if (resp === null) {
+                            throw error
+                        }
+
                         // Retry the original request
                         return this.customRequest({
                             method: error.config.method,

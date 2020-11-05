@@ -82,6 +82,20 @@ export default class AuthStoreModule extends VuexModule<IAuthState, IRootState> 
     }
 
     @Action
+    public async getAccessToken(): Promise<string | void | null> {
+        if (this.context.state.id === undefined || this.context.state.sid === undefined) {
+            return null
+        }
+
+        try {
+            return this._service.tryAccquireTokenRedirect(this.context.state.id, this.context.state.sid)
+        } catch (err) {
+            appInsights.trackException({ exception: err })
+            return null
+        }
+    }
+
+    @Action
     public async login(): Promise<void> {
         try {
             await this._service.login()

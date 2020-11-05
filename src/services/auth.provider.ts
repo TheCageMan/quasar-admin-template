@@ -6,7 +6,6 @@ import {
     AccountInfo,
     EndSessionRequest,
     AuthenticationResult,
-    SilentRequest,
     AuthorizationUrlRequest,
     InteractionRequiredAuthError,
     AuthError,
@@ -198,35 +197,37 @@ export class MsalAuthProvider {
     //     }
     // }
 
-    public async tryAccquireTokenRedirect(accountId: string): Promise<void> {
+    public async tryAccquireTokenRedirect(accountId: string, sid: string): Promise<string | void> {
         if (!REQUEST_CONFIG.apiScopes) {
             throw new Error('API scopes not defined')
         }
         
         const account = this.msalInstance.getAccountByHomeId(accountId)
         if (account == null) {
-            //this.setIdentityCallback(undefined)
             return this.msalInstance.acquireTokenRedirect({
+                sid: sid,
                 scopes: REQUEST_CONFIG.apiScopes
             })
         }
 
-        const req: SilentRequest = {
-            account: account,
-            scopes: REQUEST_CONFIG.apiScopes,
-            forceRefresh: false // Set this to "true" to skip a cached token and go to the server to get a new token
-        }
-
         try {
-            const authResponse = await this.msalInstance.acquireTokenSilent(req)
-            // ToDo set api token
+            const authResponse = await this.msalInstance.acquireTokenSilent({
+                account: account,
+                scopes: REQUEST_CONFIG.apiScopes,
+                forceRefresh: false // Set this to "true" to skip a cached token and go to the server to get a new token
+            })
+            return authResponse.accessToken
         } catch (error) {
-            //this.setErrorCallback(error)
+            const req: RedirectRequest = {
+                sid: sid,
+                scopes: REQUEST_CONFIG.apiScopes
+            }
             if (error instanceof InteractionRequiredAuthError) {
                 return this.msalInstance.acquireTokenRedirect(req)
             } else if (error instanceof AuthError) {
                 return this.msalInstance.acquireTokenRedirect(req)
             }
+            throw error
         }
     }
 
