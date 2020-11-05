@@ -5,6 +5,10 @@ export const uuidv4 = (): string => {
     );
 }
 
+export function getProperty<T, K extends keyof T>(o: T, propertyName: string): T[K] {
+    return o[propertyName]; // o[propertyName] is of type T[K]
+}
+
 export class DeferredPromise {
     private _promise: Promise<void>
     private _resolve!: () => void;
