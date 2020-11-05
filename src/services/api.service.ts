@@ -1,49 +1,56 @@
 import { Store } from 'vuex'
 import { IRootState } from '@/store'
-import axios, { AxiosInstance, AxiosPromise, AxiosResponse } from 'axios'
+import axios, { AxiosInstance, AxiosPromise, AxiosResponse, AxiosRequestConfig } from 'axios'
+import { getProperty } from '@/minins/helper'
+
+const handlerNames = Object.freeze({
+    ADD_AUTH_HEADER: 'addAuthHeader',
+    INTERCEPT_401: 'intercept401'
+})
+
+export interface ApiRequestConfig extends AxiosRequestConfig {
+    addAuthHeader?: boolean,
+    intercept401?: boolean,
+    retryCount?: number
+}
 
 export class ApiService {
 
     private _store: Store<IRootState>
-    private _token: string | null
     private _client: AxiosInstance
-        // Stores the 401 interceptor position so that it can be later ejected when needed
-    private _401interceptor = 0
 
     constructor(baseUrl: string, store: Store<IRootState>) {
         this._store = store
-        this._token = null
-        this._client = axios.create({
+
+        const config: ApiRequestConfig = {
             baseURL: baseUrl,
             timeout: 30000,
             headers: {
                 'Content-Type': 'application/json'
-            }
-        })
-        this.setAuthHeader()
+            },
+            addAuthHeader: true,
+            intercept401: true
+        }
+
+        this._client = axios.create(config)
+        this._client.interceptors.request.use(async request => await ApiService.authHeaderHandler(request, () => this._store.dispatch('AuthStoreModule/getAccessToken')))
+        this._client.interceptors.response.use((response) => response, async (error) => await ApiService.intercept401Handler(error, (config) => this.customRequest(config)))
     }
 
-    private setAuthHeader(): void {
-        this._client.interceptors.request.use(config => {
-            config.headers.Authorization = `Bearer ${this._token || ''}`
-            return config;
-        })
+    public get<TResult>(url: string, config: ApiRequestConfig): Promise<AxiosResponse<TResult>> {
+        return this._client.get(url, config)
     }
 
-    public get<TResult>(url: string): Promise<AxiosResponse<TResult>> {
-        return this._client.get(url)
+    public post<TResult>(url: string, data: any, config: ApiRequestConfig): Promise<AxiosResponse<TResult>> {
+        return this._client.post(url, data, config)
     }
 
-    public post<TResult>(url: string, data: any): Promise<AxiosResponse<TResult>> {
-        return this._client.post(url, data)
+    public put<TResult>(url: string, data: any, config: ApiRequestConfig): Promise<AxiosResponse<TResult>> {
+        return this._client.put(url, data, config)
     }
 
-    public put<TResult>(url: string, data: any): Promise<AxiosResponse<TResult>> {
-        return this._client.put(url, data)
-    }
-
-    public delete<TResult>(url: string): Promise<AxiosResponse<TResult>> {
-        return this._client.delete(url)
+    public delete<TResult>(url: string, config: ApiRequestConfig): Promise<AxiosResponse<TResult>> {
+        return this._client.delete(url, config)
     }
 
     /**
@@ -57,47 +64,40 @@ export class ApiService {
      *    - username
      *    - password
     **/
-    public customRequest<T>(data: any): AxiosPromise<T> {
+    public customRequest<T>(data: AxiosRequestConfig): AxiosPromise<T> {
         return this._client(data)
     }
 
-    public async mount401Interceptor(): Promise<void> {
-        this._401interceptor = this._client.interceptors.response.use(
-            (response) => {
-                return response
-            },
-            async (error) => {
-                if (error.request.status == 401) {
-                    // Refresh the access token
-                    try {
-                        const resp = await this._store.AuthStoreModule.getAccessToken()
-                        if (resp === null) {
-                            throw error
-                        }
+    private static intercept401Handler(error: any, retry: (config: ApiRequestConfig) => AxiosPromise): AxiosPromise {
+        const retryCount: number = error.config.retryCount ?? 0
 
-                        this._token = resp
+        if (error.response?.status === 401 && retryCount < 1)
+        {
+            return retry({
+                method: error.config.method,
+                url: error.config.url,
+                data: error.config.data,
+                retryCount: retryCount+ 1
+            })
+        }
 
-                        // Retry the original request
-                        return this.customRequest({
-                            method: error.config.method,
-                            url: error.config.url,
-                            data: error.config.data
-                        })
-                    } catch (e) {
-                        // Refresh has failed - reject the original request
-                        throw error
-                    }
-                }
-
-                // If error was not 401 just reject as is
-                throw error
-            }
-        )
+        throw error
     }
 
-    public unmount401Interceptor(): void {
-        // Eject the interceptor
-        this._client.interceptors.response.eject(this._401interceptor)
+    private static async authHeaderHandler(config: AxiosRequestConfig, getToken: () => Promise<string | null>): Promise<AxiosRequestConfig> {
+        if (this.isHandlerEnabled(handlerNames.ADD_AUTH_HEADER, config)) {
+            const token = await getToken()
+            if (token) {
+                config.headers.Authorization = `Bearer ${token}`
+            } else {
+                config.headers.Authorization = null
+            }
+        }
+        return config
+    }
+
+    private static isHandlerEnabled(handlerName: string, config: AxiosRequestConfig = {}): boolean {
+        return handlerName in config && getProperty(config, handlerName) as boolean === true
     }
 }
 
