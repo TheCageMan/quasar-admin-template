@@ -51,6 +51,8 @@ See [Configuring quasar.conf.js](https://quasar.dev/quasar-cli/quasar-conf-js).
 ### Used environment variables (saved in .env)
 ```bash
 APP_PUBLIC_PATH=
+APP_ROOT_API=*** API Url ***
+
 AI_INSTRUMENTATION_KEY=
 AI_APP_ID=*** your app id ***
 
