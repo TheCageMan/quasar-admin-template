@@ -5,13 +5,14 @@ import axios, { AxiosInstance, AxiosPromise, AxiosResponse } from 'axios'
 export class ApiService {
 
     private _store: Store<IRootState>
-    private _token: string
+    private _token: string | null
     private _client: AxiosInstance
         // Stores the 401 interceptor position so that it can be later ejected when needed
     private _401interceptor = 0
 
     constructor(baseUrl: string, store: Store<IRootState>) {
         this._store = store
+        this._token = null
         this._client = axios.create({
             baseURL: baseUrl,
             timeout: 30000,
@@ -24,7 +25,7 @@ export class ApiService {
 
     private setAuthHeader(): void {
         this._client.interceptors.request.use(config => {
-            config.headers.Authorization = `Bearer ${this._token}`
+            config.headers.Authorization = `Bearer ${this._token || ''}`
             return config;
         })
     }
@@ -73,6 +74,8 @@ export class ApiService {
                         if (resp === null) {
                             throw error
                         }
+
+                        this._token = resp
 
                         // Retry the original request
                         return this.customRequest({
