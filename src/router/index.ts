@@ -3,6 +3,7 @@ import { getModule } from 'vuex-module-decorators'
 import AuthStoreModule from '@/store/auth'
 import VuexBroadcast from '@/store/plugins/broadcast'
 import routes from './routes'
+import { SessionStorage } from 'quasar'
 
 const AuthGuard = (app, authStore: AuthStoreModule) => async (to: Route, from: Route, next: NavigationGuardNext<Vue>) => {
   if (to.matched.some(record => record.meta.allowAnonymous == true)) {
@@ -19,6 +20,12 @@ const AuthGuard = (app, authStore: AuthStoreModule) => async (to: Route, from: R
       app.$ai.trackException({ exception: err })
       next(false)
     }
+  }
+}
+
+const AfterEachGuard = (to: Route) => {
+  if (to.name !== 'Login') {
+    SessionStorage.set('app:lastRoute', to.path)
   }
 }
 
@@ -50,6 +57,7 @@ export default async function ({ app, store, Vue }): Promise<VueRouter> {
   })
 
   router.beforeEach(AuthGuard(app, authStore))
+  router.afterEach(AfterEachGuard)
 
   return router;
 }
