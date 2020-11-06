@@ -2,6 +2,9 @@
 import { RouteConfig, Route, NavigationGuardNext } from 'vue-router';
 import { getModule } from 'vuex-module-decorators'
 import AuthStoreModule from '@/store/auth';
+import { SessionStorage } from 'quasar';
+
+const redirectSessionKey = 'app:redirect'
 
 export default function (app, store) {
   // @ts-expect-error can't figure out how to remove TS error
@@ -14,6 +17,10 @@ export default function (app, store) {
       component: () => import('pages/auth/login.vue'),
       meta: {
         allowAnonymous: true
+      },
+      beforeEnter: async (to: Route, from: Route, next: NavigationGuardNext<Vue>) => {
+        SessionStorage.set(redirectSessionKey, from.path)
+        next()
       }
     },
     {
@@ -88,6 +95,11 @@ export default function (app, store) {
           name: 'AuthCallback',
           meta: {
             allowAnonymous: true
+          },
+          beforeEnter: async (to: Route, from: Route, next: NavigationGuardNext<Vue>) => {
+            const redirect = SessionStorage.getItem(redirectSessionKey) as string | null
+            SessionStorage.remove(redirectSessionKey)
+            next(redirect || '/')
           }
         },
       ]
