@@ -86,9 +86,8 @@ export default function (app, store) {
         {
           path: 'callback',
           name: 'AuthCallback',
-          redirect: '/dashboard',
           meta: {
-            allowAnonymous: false
+            allowAnonymous: true
           }
         },
       ]
