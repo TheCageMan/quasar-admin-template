@@ -9,7 +9,8 @@ import {
     AuthorizationUrlRequest,
     InteractionRequiredAuthError,
     AuthError,
-    RedirectRequest
+    RedirectRequest,
+    PopupRequest
 } from '@azure/msal-browser'
 import Identity from '@/store/auth/identity'
 import { appInsights } from '@/boot/ai'
@@ -109,7 +110,7 @@ export class MsalAuthProvider {
     }
 
     private handleRedirectResponse(authResponse: AuthenticationResult | null): AuthResult | null {
-        if (authResponse) {
+        if (authResponse !== null && authResponse.account !== null) {
             return {
                 accountId: authResponse.account.homeAccountId, 
                 // @ts-expect-error can't figure out how to remove TS error
@@ -122,10 +123,11 @@ export class MsalAuthProvider {
         }
     }
 
-    async loginPopup(request?: AuthorizationUrlRequest): Promise<AuthResult | Error> {
+    async loginPopup(request?: PopupRequest): Promise<AuthResult | Error> {
         try {
             const authResponse = await this.msalInstance.loginPopup(request)
             return {
+                // @ts-expect-error
                 accountId: authResponse.account.homeAccountId, 
                 // @ts-expect-error can't figure out how to remove TS error
                 sid: authResponse.idTokenClaims.sid,

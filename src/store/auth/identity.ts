@@ -10,7 +10,7 @@ export default class Identity {
   private readonly _scopes: Array<string>;
   private readonly _idToken: string;
   private readonly _idTokenClaims: object;
-  private readonly _expiresOn: Date;
+  private readonly _expiresOn: Date | null;
 
   constructor(tokenResponse: AuthenticationResult) {
     this._scopes = tokenResponse.scopes
@@ -27,7 +27,7 @@ export default class Identity {
     return this._idTokenClaims
   }
 
-  get expiresOn(): Date {
+  get expiresOn(): Date | null {
     return this._expiresOn
   }
 }
