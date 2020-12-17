@@ -36,13 +36,13 @@ yarn install
 
 ### To run the app in development mode (hot-code reloading, error reporting, etc.)
 ```bash
-yarn dev
+quasar dev
 ```
 
 
 ### Build the application
 ```bash
-yarn build
+quasar build
 ```
 
 ### Customize the configuration
