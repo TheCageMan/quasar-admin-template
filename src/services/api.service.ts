@@ -37,19 +37,19 @@ export class ApiService {
         this._client.interceptors.response.use((response) => response, async (error) => await ApiService.intercept401Handler(error, (config) => this.customRequest(config)))
     }
 
-    public get<TResult>(url: string, config: ApiRequestConfig): Promise<AxiosResponse<TResult>> {
+    public get<TResult>(url: string, config?: ApiRequestConfig | undefined): Promise<AxiosResponse<TResult>> {
         return this._client.get(url, config)
     }
 
-    public post<TResult>(url: string, data: any, config: ApiRequestConfig): Promise<AxiosResponse<TResult>> {
+    public post<TResult>(url: string, data: any, config?: ApiRequestConfig | undefined): Promise<AxiosResponse<TResult>> {
         return this._client.post(url, data, config)
     }
 
-    public put<TResult>(url: string, data: any, config: ApiRequestConfig): Promise<AxiosResponse<TResult>> {
+    public put<TResult>(url: string, data: any, config?: ApiRequestConfig | undefined): Promise<AxiosResponse<TResult>> {
         return this._client.put(url, data, config)
     }
 
-    public delete<TResult>(url: string, config: ApiRequestConfig): Promise<AxiosResponse<TResult>> {
+    public delete<TResult>(url: string, config?: ApiRequestConfig | undefined): Promise<AxiosResponse<TResult>> {
         return this._client.delete(url, config)
     }
 
