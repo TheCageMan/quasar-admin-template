@@ -127,7 +127,7 @@ export class MsalAuthProvider {
         try {
             const authResponse = await this.msalInstance.loginPopup(request)
             return {
-                // @ts-expect-error
+                // @ts-expect-error skip null check
                 accountId: authResponse.account.homeAccountId, 
                 // @ts-expect-error can't figure out how to remove TS error
                 sid: authResponse.idTokenClaims.sid,
