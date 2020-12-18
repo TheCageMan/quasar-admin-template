@@ -14,7 +14,7 @@ export interface ApiRequestConfig extends AxiosRequestConfig {
     retryCount?: number
 }
 
-export class ApiService {
+export default class ApiService {
 
     private _store: Store<IRootState>
     private _client: AxiosInstance
@@ -35,6 +35,10 @@ export class ApiService {
         this._client = axios.create(config)
         this._client.interceptors.request.use(async request => await ApiService.authHeaderHandler(request, () => this._store.dispatch('AuthStoreModule/getAccessToken')))
         this._client.interceptors.response.use((response) => response, async (error) => await ApiService.intercept401Handler(error, (config) => this.customRequest(config)))
+    }
+
+    public get store(): Store<IRootState> {
+        return this._store;
     }
 
     public get<TResult>(url: string, config?: ApiRequestConfig | undefined): Promise<AxiosResponse<TResult>> {
@@ -100,5 +104,3 @@ export class ApiService {
         return handlerName in config && getProperty(config, handlerName) as boolean === true
     }
 }
-
-export default ApiService
