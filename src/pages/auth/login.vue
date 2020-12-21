@@ -41,12 +41,13 @@
 <script lang="ts">
 import { Component, Vue } from 'vue-property-decorator'
 import { getModule } from 'vuex-module-decorators'
+import { store } from '@/store'
 import AuthStoreModule from '@/store/auth'
 
 @Component
 export default class LoginPage extends Vue {
   // @ts-expect-error can't figure out how to remove TS error
-  private readonly authStore: AuthStoreModule = getModule(AuthStoreModule, this.$store)
+  private readonly authStore: AuthStoreModule = getModule(AuthStoreModule, store)
 
   login(): Promise<void> {
     return this.authStore.login()
