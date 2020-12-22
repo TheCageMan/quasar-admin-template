@@ -79,7 +79,6 @@ module.exports = {
 
     'prefer-promise-reject-errors': 'off',
     quotes: ['warn', 'single', { avoidEscape: true }],
-    '@typescript-eslint/explicit-function-return-type': 'off',
     '@typescript-eslint/explicit-module-boundary-types': 'off',
 
     // allow console.log during development only
