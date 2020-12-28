@@ -42,19 +42,19 @@ export default class ApiService {
     }
 
     public get<TResult>(url: string, config?: ApiRequestConfig | undefined): Promise<AxiosResponse<TResult>> {
-        return this._client.get(url, config)
+        return this._client.get(encodeURI(url), config)
     }
 
     public post<TResult>(url: string, data: any, config?: ApiRequestConfig | undefined): Promise<AxiosResponse<TResult>> {
-        return this._client.post(url, data, config)
+        return this._client.post(encodeURI(url), data, config)
     }
 
     public put<TResult>(url: string, data: any, config?: ApiRequestConfig | undefined): Promise<AxiosResponse<TResult>> {
-        return this._client.put(url, data, config)
+        return this._client.put(encodeURI(url), data, config)
     }
 
     public delete<TResult>(url: string, config?: ApiRequestConfig | undefined): Promise<AxiosResponse<TResult>> {
-        return this._client.delete(url, config)
+        return this._client.delete(encodeURI(url), config)
     }
 
     /**
@@ -69,6 +69,7 @@ export default class ApiService {
      *    - password
     **/
     public customRequest<T>(data: AxiosRequestConfig): AxiosPromise<T> {
+        if (data.url) data.url = encodeURI(data.url)
         return this._client(data)
     }
 
