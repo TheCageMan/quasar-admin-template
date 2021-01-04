@@ -74,7 +74,7 @@ export default class ApiService {
     }
 
     private static intercept401Handler(error: any, retry: (config: ApiRequestConfig) => AxiosPromise): AxiosPromise {
-        const retryCount: number = error.config.retryCount ?? 0
+        const retryCount: number = error.config?.retryCount ?? 0
 
         if (error.response?.status === 401 && retryCount < 1)
         {
