@@ -27,7 +27,7 @@ export default class AuthStoreModule extends VuexModule implements IAuthState {
     return actionTypes.includes(name)
   }
 
-  private _service!: MsalAuthProvider
+  private readonly _service: MsalAuthProvider = new MsalAuthProvider(MSAL_CONFIG)
   private _setUserPromise!: DeferredPromise
 
   id: string | undefined = undefined
@@ -36,9 +36,6 @@ export default class AuthStoreModule extends VuexModule implements IAuthState {
 
   @Action
   public async initStore(): Promise<void> {
-    console.info('AuthStoreModule: Initialize state')
-
-    this._service = new MsalAuthProvider(MSAL_CONFIG)
     try {
       const result = await this._service.getRedirectPromise
       if (result) {
@@ -91,7 +88,8 @@ export default class AuthStoreModule extends VuexModule implements IAuthState {
     }
 
     try {
-      return this._service.tryAccquireTokenRedirect(state.id, state.sid)
+      const resp = await this._service.tryAccquireTokenRedirect(state.id, state.sid)
+      return resp
     } catch (err) {
       appInsights.trackException({ exception: err })
       return null
