@@ -1,160 +1,169 @@
 import { MsalAuthProvider, MSAL_CONFIG } from '@/services/auth.provider'
 import { Action, Module, Mutation, VuexModule } from 'vuex-module-decorators'
-import { IRootState } from '@/store'
 import Identity from './identity'
 import { appInsights } from '@/boot/ai'
 import { DeferredPromise } from '@/minins/helper'
 
 export interface IAuthState {
-    id: string | undefined
-    sid: string | undefined
-    identity: Identity | undefined
+  id: string | undefined
+  sid: string | undefined
+  identity: Identity | undefined
 }
 
 const actionTypes = Object.freeze([
-    '__setUser'
+  '__setUser'
 ])
 
-@Module({ 
-    name: 'AuthStoreModule',
-    namespaced: true
+@Module({
+  name: 'AuthStoreModule',
+  namespaced: true
 })
-export default class AuthStoreModule extends VuexModule<IAuthState, IRootState> implements IAuthState {
+export default class AuthStoreModule extends VuexModule implements IAuthState {
 
-    static readonly broadcast = true
+  static readonly broadcast = true
 
-    static isBroadcastAction = (name: string) => {
-        // eslint-disable-next-line no-prototype-builtins
-        return actionTypes.includes(name)
+  static isBroadcastAction = (name: string) => {
+    // eslint-disable-next-line no-prototype-builtins
+    return actionTypes.includes(name)
+  }
+
+  private _service!: MsalAuthProvider
+  private _setUserPromise!: DeferredPromise
+
+  id: string | undefined = undefined
+  sid: string | undefined = undefined
+  identity: Identity | undefined = undefined
+
+  @Action
+  public async initStore(): Promise<void> {
+    console.info('AuthStoreModule: Initialize state')
+
+    this._service = new MsalAuthProvider(MSAL_CONFIG)
+    try {
+      const result = await this._service.getRedirectPromise
+      if (result) {
+        this.__setUser({ accountId: result.accountId, sessionId: result.sid })
+        this.__setIdentity(result.identity)
+      } else {
+        if (this.context.rootState.BroadcastModule.isLeader === false) {
+          this._setUserPromise = new DeferredPromise(1000)
+          await this._setUserPromise.wait()
+        }
+      }
+    } catch (err) {
+      appInsights.trackException({ exception: err })
+    }
+  }
+
+  @Action
+  public async isAuthenticated(): Promise<boolean> {
+    const state: IAuthState = this.context.state as IAuthState
+
+    if (state.id === undefined || state.sid === undefined) {
+      return false
     }
 
-    private _service!: MsalAuthProvider
-    private _setUserPromise!: DeferredPromise
+    try {
+      const account = this._service.getAccountById(state.id)
+      if (account === null || state.identity === undefined) {
+        await this._service.login(state.sid)
+      }
 
-    id: string | undefined = undefined
-    sid: string | undefined = undefined
-    identity: Identity | undefined = undefined
-    
-    @Action
-    public async initStore(): Promise<void> {
-        console.info('AuthStoreModule: Initialize state')
+      if (state.identity === undefined) {
+        return false
+      }
 
-        this._service = new MsalAuthProvider(MSAL_CONFIG)
-        try {
-            const result = await this._service.getRedirectPromise
-            if (result){
-                this.__setUser({accountId: result.accountId, sessionId: result.sid})
-                this.__setIdentity(result.identity)
-            } else {
-                if (this.context.rootState.BroadcastModule.isLeader === false) {
-                    this._setUserPromise = new DeferredPromise(1000)
-                    await this._setUserPromise.wait()
-                }
-            }
-        } catch(err) {
-            appInsights.trackException({ exception: err })
-        }
+      // do addition identity checks
+      // expireOn
+      return true
+    } catch (err) {
+      appInsights.trackException({ exception: err })
+      return false
+    }
+  }
+
+  @Action
+  public async getAccessToken(): Promise<string | void | null> {
+    const state: IAuthState = this.context.state as IAuthState
+
+    if (state.id === undefined || state.sid === undefined) {
+      return null
     }
 
-    @Action
-    public async isAuthenticated(): Promise<boolean> {
-        if (this.context.state.id === undefined || this.context.state.sid === undefined) {
-            return false
-        }
+    try {
+      return this._service.tryAccquireTokenRedirect(state.id, state.sid)
+    } catch (err) {
+      appInsights.trackException({ exception: err })
+      return null
+    }
+  }
 
-        try {
-            const account = this._service.getAccountById(this.context.state.id)
-            if (account === null || this.context.state.identity === undefined) {
-                await this._service.login(this.context.state.sid)
-            }
+  @Action
+  public async login(): Promise<void> {
+    try {
+      await this._service.login()
+    } catch (err) {
+      appInsights.trackException({ exception: err })
+    }
+  }
 
-            if (this.context.state.identity === undefined) {
-                return false
-            }
-            
-            // do addition identity checks
-            // expireOn
-            return true
-        } catch (err) {
-            appInsights.trackException({ exception: err })
-            return false
-        }
+  @Action({ commit: 'reset' })
+  public async logout(): Promise<void> {
+    const state: IAuthState = this.context.state as IAuthState
+
+    try {
+      await this._service.logout(state.id)
+    } catch (err) {
+      appInsights.trackException({ exception: err })
+    }
+  }
+
+  @Action
+  private __setUser(val: { accountId: string, sessionId: string }) {
+    const state: IAuthState = this.context.state as IAuthState
+
+    if (this._setUserPromise) {
+      this._setUserPromise.resolve()
     }
 
-    @Action
-    public async getAccessToken(): Promise<string | void | null> {
-        if (this.context.state.id === undefined || this.context.state.sid === undefined) {
-            return null
-        }
-
-        try {
-            return this._service.tryAccquireTokenRedirect(this.context.state.id, this.context.state.sid)
-        } catch (err) {
-            appInsights.trackException({ exception: err })
-            return null
-        }
+    if (state.id && state.sid) {
+      return
     }
 
-    @Action
-    public async login(): Promise<void> {
-        try {
-            await this._service.login()
-        } catch (err) {
-            appInsights.trackException({ exception: err })
-        }
+    if (val.accountId === state.id &&
+      val.sessionId === state.sid) {
+      return
     }
 
-    @Action({ commit: 'reset' })
-    public async logout(): Promise<void> {
-        try {
-            await this._service.logout(this.context.state.id)
-        } catch (err) {
-            appInsights.trackException({ exception: err })
-        }
+    this.set_user(val)
+  }
+
+  @Action
+  private __setIdentity(val: Identity) {
+    const state: IAuthState = this.context.state as IAuthState
+
+    if (val === state.identity) {
+      return
     }
 
-    @Action
-    private __setUser(val: {accountId: string, sessionId: string}) {
-        if (this._setUserPromise){
-            this._setUserPromise.resolve()
-        }
+    this.set_identity(val)
+  }
 
-        if (this.context.state.id && this.context.state.sid) {
-            return
-        }
+  @Mutation
+  reset() {
+    this.identity = undefined
+    this.id = undefined
+    this.sid = undefined
+  }
 
-        if (val.accountId === this.context.state.id && 
-            val.sessionId === this.context.state.sid) {
-            return        
-        }
+  @Mutation
+  set_identity(val: Identity | undefined) {
+    this.identity = val
+  }
 
-        this.set_user(val)
-    }
-
-    @Action
-    private __setIdentity(val: Identity) {
-        if (val === this.context.state.identity) {
-            return
-        }
-
-        this.set_identity(val)
-    }
-
-    @Mutation
-    reset() {
-        this.identity = undefined
-        this.id = undefined
-        this.sid = undefined
-    }
-
-    @Mutation
-    set_identity(val: Identity | undefined) {
-        this.identity = val
-    }
-
-    @Mutation
-    set_user(val: {accountId: string | undefined, sessionId: string | undefined}) {
-        this.id = val.accountId
-        this.sid = val.sessionId
-    }
+  @Mutation
+  set_user(val: { accountId: string | undefined, sessionId: string | undefined }) {
+    this.id = val.accountId
+    this.sid = val.sessionId
+  }
 }

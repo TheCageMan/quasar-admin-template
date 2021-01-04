@@ -2,6 +2,8 @@ import { Store } from 'vuex'
 import { IRootState } from '@/store'
 import axios, { AxiosInstance, AxiosPromise, AxiosResponse, AxiosRequestConfig } from 'axios'
 import { getProperty } from '@/minins/helper'
+import AuthStoreModule from '@/store/auth'
+import { getModule } from 'vuex-module-decorators'
 
 const handlerNames = Object.freeze({
     ADD_AUTH_HEADER: 'addAuthHeader',
@@ -17,10 +19,12 @@ export interface ApiRequestConfig extends AxiosRequestConfig {
 export default class ApiService {
 
     private _store: Store<IRootState>
+    private _authModule: AuthStoreModule
     private _client: AxiosInstance
 
     constructor(baseUrl: string, store: Store<IRootState>) {
         this._store = store
+        this._authModule = getModule(AuthStoreModule, store)
 
         const config: ApiRequestConfig = {
             baseURL: baseUrl,
@@ -33,7 +37,7 @@ export default class ApiService {
         }
 
         this._client = axios.create(config)
-        this._client.interceptors.request.use(async request => await ApiService.authHeaderHandler(request, () => this._store.dispatch('AuthStoreModule/getAccessToken')))
+        this._client.interceptors.request.use(async request => await ApiService.authHeaderHandler(request, () => this._authModule.getAccessToken()))
         this._client.interceptors.response.use((response) => response, async (error) => await ApiService.intercept401Handler(error, (config) => this.customRequest(config)))
     }
 
@@ -89,7 +93,7 @@ export default class ApiService {
         throw error
     }
 
-    private static async authHeaderHandler(config: AxiosRequestConfig, getToken: () => Promise<string | null>): Promise<AxiosRequestConfig> {
+    private static async authHeaderHandler(config: AxiosRequestConfig, getToken: () => Promise<string | void | null>): Promise<AxiosRequestConfig> {
         if (this.isHandlerEnabled(handlerNames.ADD_AUTH_HEADER, config)) {
             const token = await getToken()
             if (token) {

@@ -40,8 +40,7 @@ export default async function ({ app, store, Vue }): Promise<VueRouter> {
     mainChannelName: 'BroadcastChannel'
   })(store)
 
-  // @ts-expect-error can't figure out how to remove TS error
-  const authStore = getModule(AuthStoreModule, store) as AuthStoreModule
+  const authStore = getModule(AuthStoreModule, store)
   await authStore.initStore()
 
   const router: VueRouter = new VueRouter({
