@@ -5,7 +5,6 @@ import AuthStoreModule from '@/store/auth';
 import { SessionStorage } from 'quasar';
 
 export default function (app, store) {
-  // @ts-expect-error can't figure out how to remove TS error
   const authStoreModule = getModule(AuthStoreModule, store) as AuthStoreModule
 
   const r: RouteConfig[] = [
